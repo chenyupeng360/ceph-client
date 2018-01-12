@@ -552,12 +552,15 @@ void ceph_destroy_inode(struct inode *inode)
 			     realm);
 			spin_lock(&realm->inodes_with_caps_lock);
 			list_del_init(&ci->i_snap_realm_item);
+			ci->i_snap_realm = NULL;
+			if (realm->ino == ci->i_vino.ino)
+				realm->inode = NULL;
 			spin_unlock(&realm->inodes_with_caps_lock);
 			ceph_put_snap_realm(mdsc, realm);
 		} else {
 			ceph_put_snapid_map(mdsc, ci->i_snapid_map);
+			ci->i_snap_realm = NULL;
 		}
-		ci->i_snap_realm = NULL;
 	}
 
 	kfree(ci->i_symlink);
