@@ -2180,23 +2180,9 @@ int ceph_calc_file_object_mapping(struct ceph_file_layout *layout,
 				   u64 *ono,
 				   u64 *oxoff, u64 *oxlen)
 {
-	u32 osize = layout->object_size;
-	u32 su = layout->stripe_unit;
-	u32 sc = layout->stripe_count;
-	u32 su_per_object;
 	u32 xlen;
 
-	dout("mapping %llu~%llu  osize %u fl_su %u\n", off, len,
-	     osize, su);
-	if (su == 0 || sc == 0)
-		goto invalid;
-	su_per_object = osize / su;
-	if (su_per_object == 0)
-		goto invalid;
-	dout("osize %u / su %u = su_per_object %u\n", osize, su,
-	     su_per_object);
-
-	if ((su & ~PAGE_MASK) != 0)
+	if (!ceph_file_layout_is_valid(layout))
 		goto invalid;
 
 	__ceph_calc_file_object_mapping(layout, off, len, ono, oxoff, &xlen);
