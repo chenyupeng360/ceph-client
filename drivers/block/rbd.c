@@ -923,7 +923,7 @@ static u32 rbd_obj_bytes(struct rbd_image_header *header)
 	return 1U << header->obj_order;
 }
 
-static void rbd_init_layout(struct rbd_device *rbd_dev)
+static int rbd_init_layout(struct rbd_device *rbd_dev)
 {
 	if (rbd_dev->header.stripe_unit == 0 ||
 	    rbd_dev->header.stripe_count == 0) {
@@ -937,6 +937,8 @@ static void rbd_init_layout(struct rbd_device *rbd_dev)
 	rbd_dev->layout.pool_id = rbd_dev->header.data_pool_id == CEPH_NOPOOL ?
 			  rbd_dev->spec->pool_id : rbd_dev->header.data_pool_id;
 	RCU_INIT_POINTER(rbd_dev->layout.pool_ns, NULL);
+
+	return ceph_file_layout_is_valid(&rbd_dev->layout) ? 0 : -EINVAL;
 }
 
 /*
@@ -1014,7 +1016,7 @@ static int rbd_header_from_disk(struct rbd_device *rbd_dev,
 	if (first_time) {
 		header->object_prefix = object_prefix;
 		header->obj_order = ondisk->options.order;
-		rbd_init_layout(rbd_dev);
+		WARN_ON(rbd_init_layout(rbd_dev));
 	} else {
 		ceph_put_snap_context(header->snapc);
 		kfree(header->snap_names);
@@ -5269,7 +5271,17 @@ static int rbd_dev_v2_header_onetime(struct rbd_device *rbd_dev)
 			goto out_err;
 	}
 
-	rbd_init_layout(rbd_dev);
+	ret = rbd_init_layout(rbd_dev);
+#if 0 /* TODO(dis) */
+	if (ret) {
+		rbd_warn(rbd_dev, "bad layout (su %u sc %u os %u)",
+			 rbd_dev->layout.stripe_unit,
+			 rbd_dev->layout.stripe_count,
+			 rbd_dev->layout.object_size);
+		goto out_err;
+	}
+#endif
+
 	return 0;
 
 out_err:
