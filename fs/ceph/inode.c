@@ -1345,6 +1345,10 @@ retry_lookup:
 			     dn, d_inode(dn), ceph_vinop(d_inode(dn)),
 			     ceph_vinop(in));
 			d_invalidate(dn);
+			/* Prito to v3.19,d_invalidate might unhash the dentry unsuccessfully.*/
+			if (!d_unhashed(dn)) {
+				d_drop(dn);
+			}
 			have_lease = false;
 		}
 
